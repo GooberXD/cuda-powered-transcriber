@@ -48,7 +48,8 @@ python test_gpu.py
 
 ## Requirements
 - **Python**: 3.12+
-- **GPU**: NVIDIA GPU with 6GB+ VRAM (for Large-v3)
+- **GPU**: NVIDIA GPU with 6GB+ VRAM 
+    - *Note: Confirmed working on a **RTX 5050 Mobile**.*
 - **Libraries**:
     - `faster-whisper`
     - `streamlit`
