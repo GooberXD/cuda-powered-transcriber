@@ -42,11 +42,30 @@ from faster_whisper import WhisperModel
 MODEL_SIZE = "large-v3"  #*
 device = "cuda" #** 
 
+
+# Load the model once and cache it for future use
+@st.cache_resource
+def load_whisper_model():
+    return WhisperModel(MODEL_SIZE, device=device, compute_type="float16")
+
+# clear uploaded file and then reset app
+def reset_app():
+    for key in st.session_state.keys():
+        del st.session_state[key]
+    st.rerun()
+
 st.title("Video Transcriber, powered by autism AI")
 st.write("upload cum here and i spit that thang (text).")
 
+
+
 # upload vid here
-uploaded_file = st.file_uploader("Choose a video file, neckhurt!!", type=["mp4", "mkv", "mov", "avi"])
+if 'uploader_key' not in st.session_state:
+    st.session_state.uploader_key = 0
+
+uploaded_file = st.file_uploader("Choose a video file, neckhurt!!", type=["mp4", "mkv", "mov", "avi"],key=f"uploader_{st.session_state.uploader_key}")
+
+
 
 if uploaded_file is not None:
     # Saves temp video and file for processing
@@ -66,23 +85,25 @@ if uploaded_file is not None:
     # transcribing section
     st.subheader("Transcription")
     
+    full_text = ""
     with st.spinner("Transcribing... (This may take a minute chat)"):
-        model = WhisperModel(MODEL_SIZE, device="cuda", compute_type="float16")
+        model = load_whisper_model()
         segments, info = model.transcribe(audio_path, beam_size=5)
         
-        full_text = ""
+        # container to show text as it generates text
+        text_container = st.container()
         for segment in segments:
             # prints and stores thine text with timestamps 
             # format eg. [11.92s -> 17.68s]
             timestamp = f"[{segment.start:.2f}s -> {segment.end:.2f}s]"
             line = f"{timestamp} {segment.text}\n"
-            st.write(line)
+            text_container.write(line)
             full_text += line
 
     # Downloads transcript to scripts director
+    st.divider()
     original_filename = uploaded_file.name
     base_name = os.path.splitext(original_filename)[0]
-    
     download_name = f"{base_name}_transcript.txt"
     
     
@@ -92,12 +113,28 @@ if uploaded_file is not None:
         file_name=download_name,
         mime="text/plain"
     )
+        
+    if st.button("Transcribe New Video gng"):
+        # Cleanup temp files before resetting
+        try:
+            if os.path.exists(video_path):
+                os.remove(video_path)
+            if os.path.exists(audio_path):
+                os.remove(audio_path)
+        except:
+            pass
+        
+        # inc key to reset uploader and rerun app
+        st.session_state.uploader_key += 1
+        st.rerun()
 
-    # Cleanup temporary files
+    # clean up automatic after transcription, incase user forgets to click the button
     try:
         if os.path.exists(video_path):
             os.remove(video_path)
         if os.path.exists(audio_path):
             os.remove(audio_path)
     except Exception as e:
-        st.warning(f"Note: Could not delete temporary files, delete them manually pls: {e}")
+        pass
+        
+        
