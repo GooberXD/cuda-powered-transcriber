@@ -57,32 +57,45 @@ def reset_app():
 st.title("Video Transcriber, powered by autism AI")
 st.write("upload cum here and i spit that thang (text).")
 
-
-
-# upload vid here
+# upload media here
 if 'uploader_key' not in st.session_state:
     st.session_state.uploader_key = 0
 
-uploaded_file = st.file_uploader("Choose a video file, neckhurt!!", type=["mp4", "mkv", "mov", "avi"],key=f"uploader_{st.session_state.uploader_key}")
+video_tab, audio_tab = st.tabs(["Video transcription", "Audio transcription"])
+with video_tab:
+    uploaded_video = st.file_uploader(
+        "Choose a video file, neckhurt!!",
+        type=["mp4", "mkv", "mov", "avi"],
+        key=f"video_uploader_{st.session_state.uploader_key}",
+    )
+with audio_tab:
+    uploaded_audio = st.file_uploader(
+        "Choose an audio file",
+        type=["mp3", "wav", "m4a", "flac", "aac", "ogg", "wma"],
+        key=f"audio_uploader_{st.session_state.uploader_key}",
+    )
 
-
+uploaded_file = uploaded_video or uploaded_audio
 
 if uploaded_file is not None:
-    # Saves temp video and file for processing
+   
     video_path = "temp_video.mp4"
-    audio_path = "temp_audio.mp3"
-    
-    with open(video_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
 
-    # audio extraction
-    with st.status("Extracting audio...", expanded=True) as status:
-        # Using 'with' automatically closes the file when the block ends
-        with mp.VideoFileClip(video_path) as video:
-            video.audio.write_audiofile(audio_path)
-        status.update(label="Audio extracted!", state="complete")
+    if uploaded_video is not None:
+        audio_path = "temp_audio.mp3"
+        with open(video_path, "wb") as f:
+            f.write(uploaded_video.getbuffer())
 
-    # transcribing section
+        with st.status("Extracting audio...", expanded=True) as status:
+            with mp.VideoFileClip(video_path) as video:
+                video.audio.write_audiofile(audio_path)
+            status.update(label="Audio extracted!", state="complete")
+    else:
+        audio_extension = os.path.splitext(uploaded_audio.name)[1] or ".mp3"
+        audio_path = f"temp_audio{audio_extension}"
+        with open(audio_path, "wb") as f:
+            f.write(uploaded_audio.getbuffer())
+
     st.subheader("Transcription")
     
     full_text = ""
